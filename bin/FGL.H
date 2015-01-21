@@ -1,5 +1,6 @@
 #define FGL_LOADED
-#define FGL_GRAPHICS 0x12
+#define GRAPHICS_MODE 0x12
+#define TEXT_MODE 0x2
 #define NULL 0
 #define MAKE_COL(R,G,B,I) ((R * 8) + (G * 4) + (B * 2) + I)
 #define VDU_TEXT 0xb0008000
