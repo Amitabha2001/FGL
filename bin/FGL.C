@@ -92,8 +92,7 @@ struct MouseState getMouseState( )
 
 void xInitializeGL(struct Device *dev)
 {
-   dev->__mode = 0x3;
-   dev->__vdu_txt_ar = (char far *) 0xb0008000;
+   dev->__mode = TEXT_MODE;
 }
 
 void InitializeGL(struct Device *dev)
@@ -102,33 +101,30 @@ void InitializeGL(struct Device *dev)
     asm mov al , 0x12 ;
     asm int 0x10 ;
 
-    dev->__mode = 0x12;
+    dev->__mode = GRAPHICS_MODE;
     dev->__adapterSize = 0;
 }
 
 int WriteCharGL(struct Device *dev,char ch,int _ch_col)
 {
-    if (dev->__mode == 0x0 || dev->__mode == 0x1 || dev->__mode == 0x2 || dev->__mode == 0x3 || dev->__mode == 0x7)
+    if (dev->__mode == TEXT_MODE)
     {
-	 *(dev->__vdu_txt_ar) = ch; // Write the current character .
-	 dev->__vdu_txt_ar++;            // Advance to the next block.
-	 *(dev->__vdu_txt_ar) = _ch_col;  // Write the colour of the character
-
-	 dev->__vdu_txt_ar++;       // Advance to the next block.
-
+    	char _ch = ch;
+	 asm mov ah , 0x0e ; // Print char function.
+	 asm mov al , _ch ;   // Char to print.
+	 asm int 0x10 ;  // Call function.
+	
      return 1;
    }
-   else
-   {
-     return NULL; // Error
-   }
+   
+   return NULL; // Error
 }
 
 int WriteStringGL(struct Device *dev,const char *__str,int _ch_col)
 {
    int cnt = 0;
    
-   if (dev->__mode == 0x0 || dev->__mode == 0x1 || dev->__mode == 0x2 || dev->__mode == 0x3 || dev->__mode == 0x7)
+   if (dev->__mode == TEXT_MODE)
    {
      for(;;)
      {
@@ -146,10 +142,9 @@ int WriteStringGL(struct Device *dev,const char *__str,int _ch_col)
 
      return 1;
    }
-   else
-   {
-     return NULL; // Error
-   }
+   
+   
+   return NULL; // Error
 }
 
 struct Data * resizeAdapterGL(struct Device *dev,int newsize)
@@ -159,35 +154,16 @@ struct Data * resizeAdapterGL(struct Device *dev,int newsize)
  
    for(;cnt < dev->__adapterSize;cnt++)
    {
-    _dat[cnt].__P.__Px = dev->__data_ar[cnt].__P.__Px;
-	_dat[cnt].__P.__Py = dev->__data_ar[cnt].__P.__Py;
-	_dat[cnt]._R = dev->__data_ar[cnt]._R;
-	_dat[cnt]._G = dev->__data_ar[cnt]._G;
-	_dat[cnt]._B = dev->__data_ar[cnt]._B;
-	_dat[cnt]._I = dev->__data_ar[cnt]._I;
+    	_dat[cnt] = dev->__data_ar[cnt];
    }
 
-   /* for(cnt = dev->__adapterSize;cnt < newsize;cnt++)
-   {
-     struct Data dat;
-
-     dat.__P.__Px = 0;
-     dat.__P.__Py = 0;
-
-     dat._R = 0;
-     dat._G = 0;
-     dat._B = 0;
-     dat._I = 0;
-
-     _dat[cnt] = dat;
-   } The existance of this block of code is same as if it dont exist. */
    
    return _dat;
 }
 
 int PlotPixelGL(struct Device *dev,struct Data pix_dat)
 {
-  if (dev->__mode == 0x12)
+  if (dev->__mode == GRAPHICS_MODE)
   {
 	dev->__data_ar = resizeAdapterGL(dev,dev->__adapterSize + 1);
 	dev->__data_ar[dev->__adapterSize] = pix_dat;
@@ -204,21 +180,21 @@ struct Pixel ReadPixelGL(struct Device *dev,int pos_x,int pos_y)
 {
    struct Pixel px;
 
-   if (dev->__mode == 0x12)
+   if (dev->__mode == GRAPHICS_MODE)
    {
-   char _col;
-   char sc = GetScreenGL( );
+   	char _col;
+   	char sc = GetScreenGL( );
 
-   asm mov ah , 0x0d ;
-   asm mov bh , [sc] ;
-   asm mov cx , [pos_x] ;
-   asm mov dx , [pos_y] ;
-   asm int 0x10 ;
-   asm mov [_col] , al ;
+   	asm mov ah , 0x0d ;
+   	asm mov bh , [sc] ;
+   	asm mov cx , [pos_x] ;
+   	asm mov dx , [pos_y] ;
+   	asm int 0x10 ;
+   	asm mov [_col] , al ;
 
-   px.pos.__Px = pos_x;
-   px.pos.__Py = pos_y;
-   px._col = _col;
+   	px.pos.__Px = pos_x;
+   	px.pos.__Py = pos_y;
+   	px._col = _col;
    }
 
    return px;
@@ -226,7 +202,7 @@ struct Pixel ReadPixelGL(struct Device *dev,int pos_x,int pos_y)
 
 int LoadLineGL(struct Device *dev,int start_x,int start_y,int end_x,int end_y,struct Data pix_dat)
 {
-  if (dev->__mode == 0x12)
+  if (dev->__mode == GRAPHICS_MODE)
   {
 
   int cnt_x = start_x,cnt_y = start_y;
@@ -264,15 +240,14 @@ int LoadLineGL(struct Device *dev,int start_x,int start_y,int end_x,int end_y,st
   }
    return 1;
   }
-  else
-  {
-    return NULL;
-  }
+  
+  
+   return NULL;
 }
 
 int ImageLoadPixelGL(struct Device *dev,struct Image *img,struct Data pix_dat)
 {
-   if (dev->__mode == 0x12)
+   if (dev->__mode == GRAPHICS_MODE)
    {
     const struct Data *dat_ar = img->__data_ar;
     int cnt = 0;
@@ -285,15 +260,13 @@ int ImageLoadPixelGL(struct Device *dev,struct Image *img,struct Data pix_dat)
        img->__data_ar[cnt] = dat_ar[cnt];
     }
 
-	img->__data_ar[img->__size] = pix_dat;
-	img->__size++;
+    img->__data_ar[img->__size] = pix_dat;
+    img->__size++;
 	
      return 1;
    }
-   else
-   {
-     return NULL;
-   }
+  
+   return NULL;
 } 
 
 int ImageLoadGL(struct Device *dev,struct Image img)
@@ -350,7 +323,7 @@ int ClearViewportGL(struct Device *dev,int x,int y,int width,int height)
 
 int RenderGL(struct Device *dev)
 {
-  if (dev->__mode == 0x12)
+  if (dev->__mode == GRAPHICS_MODE)
   {
 
   int cntr = 0;
@@ -376,10 +349,8 @@ int RenderGL(struct Device *dev)
 
     return 1;
   }
-  else
-  {
-    return NULL;
-  }
+  
+  return NULL;
 }
 
 #endif
