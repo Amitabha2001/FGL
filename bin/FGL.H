@@ -32,7 +32,6 @@ struct xVertex  // Special Vertex
    struct Vertex __nv;
    struct Vertex _link;
    struct Data px__dat;
-   int _ALC;
 };
 
 struct Device
@@ -40,7 +39,6 @@ struct Device
    int __mode;
    int __adapterSize;
    struct Data * __data_ar;
-   char far * __vdu_txt_ar;
 };
 
 struct Image
